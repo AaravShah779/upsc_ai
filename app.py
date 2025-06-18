@@ -1,6 +1,5 @@
 import streamlit as st
 import openai
-from openai import OpenAI
 import json
 import time
 import random
@@ -481,6 +480,58 @@ st.markdown("""
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
+            
+/* Fix white bars and spacing issues */
+.main .block-container {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    max-width: 1200px;
+}
+
+/* Remove default Streamlit spacing */
+.stButton > button {
+    margin: 0;
+    border-radius: 15px !important;
+    height: auto !important;
+    min-height: 60px;
+    white-space: pre-line !important;
+    line-height: 1.4 !important;
+    font-size: 0.9rem !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%) !important;
+    border: 2px solid #e9ecef !important;
+    color: #333 !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    border-color: #667eea !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2) !important;
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+/* Fix column spacing */
+.element-container {
+    margin-bottom: 0 !important;
+}
+
+/* Remove extra padding */
+.stMarkdown {
+    margin-bottom: 0 !important;
+}
+
+/* Ensure consistent spacing */
+div[data-testid="column"] {
+    padding: 0.5rem;
+}
+
+/* Topic button specific styling */
+.stButton > button[kind="secondary"] {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%) !important;
+    border: 2px solid #e9ecef !important;
+    padding: 1.5rem !important;
+    text-align: center !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -504,6 +555,8 @@ def init_session_state():
         st.session_state.answer_submitted = False
     if 'bookmarked_questions' not in st.session_state:
         st.session_state.bookmarked_questions = []
+    if 'daily_goal' not in st.session_state:
+        st.session_state.daily_goal = 10  # Default goal: 10 questions per day
 
 # OpenAI API function
 def generate_mcq_question(topic, api_key):
@@ -642,11 +695,61 @@ def main():
                     st.session_state.answer_submitted = False
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
+
+        # Daily Goal Section
+        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+        st.header("🎯 Daily Goal")
+        goal_options = [10, 20, 50, 100]
+        current_goal_index = goal_options.index(st.session_state.daily_goal) if st.session_state.daily_goal in goal_options else 0
         
+        selected_goal = st.selectbox(
+            "Set your daily question goal:",
+            options=goal_options,
+            index=current_goal_index,
+            format_func=lambda x: f"{x} questions per day"
+        )
+        
+        if selected_goal != st.session_state.daily_goal:
+            st.session_state.daily_goal = selected_goal
+            st.success(f"Daily goal updated to {selected_goal} questions!")
+            st.rerun()
+        
+        # Progress bar for daily goal
+        progress = min(st.session_state.today_questions / st.session_state.daily_goal, 1.0)
+        st.progress(progress)
+        st.write(f"Progress: {st.session_state.today_questions}/{st.session_state.daily_goal} questions")
+        
+        if st.session_state.today_questions >= st.session_state.daily_goal:
+            st.success("🎉 Daily goal achieved! Great work!")
+            st.balloons()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
         # Reset Section
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
         st.header("🔄 Reset Options")
         if st.button("Reset All Stats", type="secondary"):
+            st.session_state.total_points = 0
+            st.session_state.today_questions = 0
+            st.session_state.correct_answers = 0
+            st.success("Stats reset successfully!")
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# MODIFY the display_stats function (around line 450) - replace the second metric with:
+    col1, col2 = st.columns(2)
+    with col2:
+        st.markdown(f"""
+        <div class="custom-metric">
+            <div class="metric-value">{st.session_state.daily_goal}</div>
+            <div class="metric-label">Daily Goal</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Reset Section
+        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+        st.header("🔄 Reset Options")
+        if st.button("Reset All Stats", key="reset_stats", type="secondary"):
             st.session_state.total_points = 0
             st.session_state.today_questions = 0
             st.session_state.correct_answers = 0
