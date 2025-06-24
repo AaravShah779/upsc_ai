@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from openai import openai
+from openai import OpenAI
 import time
 import random
 from datetime import datetime, date
